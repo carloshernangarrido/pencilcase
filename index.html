@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartuchera Inteligente - Comparación Visual IA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Quicksand:wght@300..700&display=swap');
+        body { font-family: 'Quicksand', sans-serif; }
+        h1, h2, h3, .font-fun { font-family: 'Fredoka', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 pb-12">
+
+    <!-- Header / Barra de Navegación -->
+    <header class="bg-indigo-600 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-400 p-2 rounded-full text-indigo-900 shadow-md transform rotate-3">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide">Cartuchera Inteligente</h1>
+                    <p class="text-xs text-indigo-200">Comparación visual inteligente día a día con Gemini</p>
+                </div>
+            </div>
+            
+            <nav class="flex space-x-1 mt-2 sm:mt-0 bg-indigo-700 p-1 rounded-lg">
+                <button data-tab="diario" class="btn-tab px-3 py-1.5 rounded-md text-sm font-medium transition-all bg-indigo-900 text-white shadow-sm">
+                    <i class="fa-solid fa-calendar-day mr-1"></i> Diario
+                </button>
+                <button data-tab="cargar" class="btn-tab px-3 py-1.5 rounded-md text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-800">
+                    <i class="fa-solid fa-camera mr-1"></i> Cargar Fotos
+                </button>
+                <button data-tab="referencia" class="btn-tab px-3 py-1.5 rounded-md text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-800">
+                    <i class="fa-solid fa-list-check mr-1"></i> Referencia Ideal
+                </button>
+                <button data-tab="config" class="btn-tab px-3 py-1.5 rounded-md text-sm font-medium transition-all text-indigo-100 hover:bg-indigo-800">
+                    <i class="fa-solid fa-gear mr-1"></i> Config
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 mt-6">
+
+        <!-- Notificaciones flotantes -->
+        <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+        <!-- ================= TAB: DIARIO / HISTORIAL ================= -->
+        <section id="tab-diario" class="tab-content block space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-rose-100 text-rose-600 rounded-xl"><i class="fa-solid fa-minus-circle text-2xl"></i></div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Útiles Perdidos acumulados</p>
+                        <h3 id="stat-perdidos" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><i class="fa-solid fa-plus-circle text-2xl"></i></div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Útiles Ganados / Comprados</p>
+                        <h3 id="stat-ganados" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+                    <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl"><i class="fa-solid fa-clock-rotate-left text-2xl"></i></div>
+                    <div>
+                        <p class="text-sm text-slate-500 font-medium">Días Controlados</p>
+                        <h3 id="stat-dias" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Bitácora Comparativa de Útiles</h2>
+                        <p class="text-sm text-slate-500">Historial de variaciones calculadas mediante comparación visual directa por IA.</p>
+                    </div>
+                    <button id="btn-ir-cargar" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center shadow transition-all">
+                        <i class="fa-solid fa-plus mr-2"></i> Nuevo Control Diario
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-100">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-100">
+                                <th class="py-4 px-6 font-semibold">Fecha del Control</th>
+                                <th class="py-4 px-6 font-semibold">Fotos Registradas</th>
+                                <th class="py-4 px-6 font-semibold">Útiles Detectados Hoy</th>
+                                <th class="py-4 px-6 font-semibold">Delta Visual (vs Día Anterior)</th>
+                                <th class="py-4 px-6 font-semibold">Faltante vs Referencia Ideal</th>
+                                <th class="py-4 px-6 font-semibold text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-diario-body" class="divide-y divide-slate-100 text-sm text-slate-700"></tbody>
+                    </table>
+                </div>
+
+                <div id="no-data-view" class="hidden py-16 text-center">
+                    <div class="text-slate-300 text-6xl mb-4"><i class="fa-solid fa-backpack"></i></div>
+                    <h3 class="text-lg font-bold text-slate-700">Aún no hay análisis guardados</h3>
+                    <p class="text-slate-500 text-sm max-w-md mx-auto mt-1 mb-6">Comienza cargando las primeras fotos para establecer la base del historial escolar.</p>
+                    <button id="btn-iniciar-primer-control" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium inline-flex items-center shadow-md">
+                        <i class="fa-solid fa-camera mr-2"></i> Iniciar Primer Control
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB: CARGAR FOTOS ================= -->
+        <section id="tab-cargar" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-md border border-slate-100 space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Cargar Fotos de Hoy</h2>
+                        <p class="text-sm text-slate-500">Sube entre 1 y 3 fotos de los útiles escolares actualmente dentro de la cartuchera.</p>
+                    </div>
+
+                    <div id="comparar-status-banner" class="p-4 rounded-xl border flex items-start space-x-3 bg-blue-50 border-blue-200 text-blue-800">
+                        <div class="mt-0.5 text-blue-600"><i class="fa-solid fa-shuffle text-lg"></i></div>
+                        <div class="text-xs">
+                            <span class="font-bold block text-sm mb-1 text-blue-900">Comparación Visual Directa Activada</span>
+                            <span id="banner-msg-comparacion">Buscando registro anterior para comparar...</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Fecha de la Toma:</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-calendar"></i></span>
+                                <input type="date" id="input-fecha" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Nota del Día:</label>
+                            <input type="text" id="input-nota" placeholder="Ej: Trajo todo ordenado" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Fotos de la Cartuchera Abierta (1 a 3 imágenes):</label>
+                        <div id="dropzone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 bg-slate-50 hover:bg-slate-100/50 rounded-2xl p-8 text-center cursor-pointer transition-colors relative">
+                            <input type="file" id="input-fotos" accept="image/*" multiple class="absolute inset-0 opacity-0 cursor-pointer">
+                            <div class="space-y-3">
+                                <div class="text-indigo-500 text-4xl"><i class="fa-solid fa-images"></i></div>
+                                <div class="text-slate-600"><span class="font-bold">Seleccionar o soltar imágenes de hoy</span></div>
+                                <p class="text-xs text-slate-400">Formatos: JPG, PNG. Fotografías de la cartuchera abierta.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="container-previews" class="hidden">
+                        <p class="text-sm font-semibold text-slate-700 mb-2">Imágenes a Analizar (<span id="count-fotos">0</span>/3):</p>
+                        <div id="preview-grid" class="grid grid-cols-3 gap-4"></div>
+                    </div>
+
+                    <div class="pt-2 flex flex-col sm:flex-row gap-3">
+                        <button id="btn-procesar" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Analizar y Comparar con Gemini
+                        </button>
+                        <button id="btn-simulacion" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center">
+                            <i class="fa-solid fa-vial mr-2"></i> Ejecutar Demo Simulada
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 space-y-4">
+                        <h3 class="text-lg font-bold text-indigo-950 flex items-center">
+                            <i class="fa-solid fa-shuffle text-amber-500 mr-2"></i> ¿Cómo funciona el Delta Visual?
+                        </h3>
+                        <p class="text-xs text-indigo-900 leading-relaxed">
+                            Compara en una sola consulta las imágenes del día anterior y las de hoy para detectar útiles perdidos o ganados sin confusiones de nombres.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB: REFERENCIA / INVENTARIO IDEAL ================= -->
+        <section id="tab-referencia" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Inventario de Referencia Ideal</h2>
+                        <p class="text-sm text-slate-500">Define los útiles que siempre deben estar en la cartuchera.</p>
+                    </div>
+                    <button id="btn-agregar-ref" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center shadow transition-all">
+                        <i class="fa-solid fa-plus mr-2"></i> Agregar Útil
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-100 mb-6">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase text-xs tracking-wider border-b border-slate-100">
+                                <th class="py-4 px-6 font-semibold">Nombre del Útil</th>
+                                <th class="py-4 px-6 font-semibold">Cantidad Requerida</th>
+                                <th class="py-4 px-6 font-semibold">Color / Detalle</th>
+                                <th class="py-4 px-6 font-semibold text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-referencia-body" class="divide-y divide-slate-100 text-sm text-slate-700"></tbody>
+                    </table>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button id="btn-restablecer-ref" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-medium">Restablecer</button>
+                    <button id="btn-guardar-ref" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center shadow-md">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Configuración
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB: CONFIGURACIÓN ================= -->
+        <section id="tab-config" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4">Configuración</h2>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">API Key de Gemini:</label>
+                        <input type="password" id="input-api-key" placeholder="Ingresa tu API Key de Google AI Studio" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <button id="btn-borrar-todo" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-xs font-semibold border border-red-200">
+                            <i class="fa-solid fa-trash-can mr-2"></i> Restablecer Aplicación
+                        </button>
+                        <button id="btn-guardar-config" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-md">
+                            Guardar Configuración
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal de Detalle de Día -->
+    <div id="modal-detalle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 flex flex-col">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-indigo-50 rounded-t-2xl">
+                <div>
+                    <h3 id="modal-titulo" class="text-xl font-bold text-indigo-950">Ficha de Análisis</h3>
+                    <p id="modal-fecha" class="text-xs text-indigo-600 font-medium"></p>
+                </div>
+                <button id="btn-cerrar-modal" class="text-slate-400 hover:text-slate-600 text-xl p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-6 flex-1">
+                <div>
+                    <h4 class="text-sm font-bold text-slate-700 mb-2">Fotos Capturadas Hoy:</h4>
+                    <div id="modal-fotos-grid" class="grid grid-cols-3 gap-3"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center"><i class="fa-solid fa-magnifying-glass text-indigo-500 mr-2"></i> Inventario Reconocido</h4>
+                        <div class="border border-slate-100 rounded-xl overflow-hidden">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase">
+                                    <tr><th class="py-2 px-3">Útil</th><th class="py-2 px-3 text-center">Cant.</th><th class="py-2 px-3">Detalle</th></tr>
+                                </thead>
+                                <tbody id="modal-tabla-items" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center"><i class="fa-solid fa-code-compare text-indigo-500 mr-2"></i> Balance del Día</h4>
+                        <div id="modal-balance-container" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                    <h4 class="text-sm font-bold text-amber-950 mb-2 flex items-center"><i class="fa-solid fa-circle-exclamation text-amber-600 mr-2"></i> Diferencia vs. Referencia Ideal</h4>
+                    <div id="modal-faltantes-referencia" class="text-xs text-amber-900 space-y-1"></div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end rounded-b-2xl">
+                <button id="btn-cerrar-modal-bottom" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2 rounded-xl text-sm font-medium">Cerrar Detalle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT CORREGIDO Y VINCULADO AL NAVEGADOR -->
+    <script>
+        const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+
+        let appState = {
+            historial: {},
+            referencia: [
+                { id: "1", name: "Lápiz negro", quantity: 2, color: "Grafito" },
+                { id: "2", name: "Goma de borrar", quantity: 1, color: "Blanca" },
+                { id: "3", name: "Tijera", quantity: 1, color: "Punta roma" },
+                { id: "4", name: "Lápices de colores", quantity: 12, color: "Caja surtida" },
+                { id: "5", name: "Adhesivo en barra", quantity: 1, color: "Mediano" },
+                { id: "6", name: "Sacapuntas", quantity: 1, color: "Con depósito" },
+                { id: "7", name: "Regla", quantity: 1, color: "Plástica 15cm" }
+            ],
+            fotosSeleccionadas: []
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const hoy = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('input-fecha');
+            if(dateInput) dateInput.value = hoy;
+
+            cargarDatosDesdeLocalStorage();
+            verificarPreviaFecha(hoy);
+            renderHistorial();
+            renderReferencia();
+
+            // EVENT LISTENER GLOBAL PARA BOTONES Y PESTAÑAS
+            document.querySelectorAll('.btn-tab').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tabId = e.currentTarget.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+
+            document.getElementById('btn-ir-cargar')?.addEventListener('click', () => switchTab('cargar'));
+            document.getElementById('btn-iniciar-primer-control')?.addEventListener('click', () => switchTab('cargar'));
+            document.getElementById('btn-procesar')?.addEventListener('click', procesarConGemini);
+            document.getElementById('btn-simulacion')?.addEventListener('click', generarSimulacion);
+            document.getElementById('btn-agregar-ref')?.addEventListener('click', agregarFilaReferencia);
+            document.getElementById('btn-restablecer-ref')?.addEventListener('click', restablecerReferenciaDefecto);
+            document.getElementById('btn-guardar-ref')?.addEventListener('click', guardarReferencia);
+            document.getElementById('btn-guardar-config')?.addEventListener('click', guardarConfiguracion);
+            document.getElementById('btn-borrar-todo')?.addEventListener('click', borrarTodosLosDatos);
+            document.getElementById('btn-cerrar-modal')?.addEventListener('click', cerrarModal);
+            document.getElementById('btn-cerrar-modal-bottom')?.addEventListener('click', cerrarModal);
+
+            dateInput?.addEventListener('change', (e) => verificarPreviaFecha(e.target.value));
+
+            // Drag and drop setup
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('input-fotos');
+
+            if(dropzone && fileInput) {
+                fileInput.addEventListener('change', handleFileSelect);
+                dropzone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add('border-indigo-500', 'bg-indigo-50');
+                });
+                dropzone.addEventListener('dragleave', () => {
+                    dropzone.classList.remove('border-indigo-500', 'bg-indigo-50');
+                });
+                dropzone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('border-indigo-500', 'bg-indigo-50');
+                    if (e.dataTransfer.files.length > 0) {
+                        procesarArchivos(e.dataTransfer.files);
+                    }
+                });
+            }
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('bg-indigo-900', 'text-white', 'shadow-sm');
+                btn.classList.add('text-indigo-100', 'hover:bg-indigo-800');
+            });
+
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if(targetTab) targetTab.classList.remove('hidden');
+
+            const btnActivo = document.querySelector(`[data-tab="${tabId}"]`);
+            if (btnActivo) {
+                btnActivo.classList.add('bg-indigo-900', 'text-white', 'shadow-sm');
+                btnActivo.classList.remove('text-indigo-100', 'hover:bg-indigo-800');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if(!container) return;
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-xl shadow-lg border text-sm flex items-center space-x-3 pointer-events-auto transform translate-y-2 transition-all duration-300 ${
+                type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' :
+                'bg-blue-50 border-blue-200 text-blue-800'
+            }`;
+
+            const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : 'fa-circle-info';
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i><span class="font-medium">${message}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function obtenerUltimoRegistroAntesDe(fechaLimite) {
+            const fechas = Object.keys(appState.historial)
+                .filter(f => f < fechaLimite)
+                .sort();
+            if (fechas.length === 0) return null;
+            return appState.historial[fechas[fechas.length - 1]];
+        }
+
+        function verificarPreviaFecha(fechaSeleccionada) {
+            const banner = document.getElementById('comparar-status-banner');
+            const bannerMsg = document.getElementById('banner-msg-comparacion');
+            if(!banner || !bannerMsg) return;
+
+            const ultimoRegistro = obtenerUltimoRegistroAntesDe(fechaSeleccionada);
+
+            if (ultimoRegistro) {
+                banner.className = "p-4 rounded-xl border flex items-start space-x-3 bg-emerald-50 border-emerald-200 text-emerald-800";
+                bannerMsg.innerHTML = `Detectado registro anterior del <strong>${formatearFechaAMano(ultimoRegistro.fecha)}</strong>. Se realizará la comparación directa.`;
+            } else {
+                banner.className = "p-4 rounded-xl border flex items-start space-x-3 bg-blue-50 border-blue-200 text-blue-800";
+                bannerMsg.innerHTML = `Este será tu primer registro guardado en la línea de tiempo.`;
+            }
+        }
+
+        function handleFileSelect(event) {
+            if (event.target.files && event.target.files.length > 0) {
+                procesarArchivos(event.target.files);
+            }
+        }
+
+        function procesarArchivos(files) {
+            const maxFiles = 3 - appState.fotosSeleccionadas.length;
+            const filesToProcess = Array.from(files).slice(0, maxFiles);
+
+            if (filesToProcess.length === 0 && files.length > 0) {
+                showToast("Ya has seleccionado el máximo de 3 fotos para hoy", "error");
+                return;
+            }
+
+            let promesas = filesToProcess.map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        redimensionarImagen(e.target.result, 800, 800, (imgRedimensionada) => resolve(imgRedimensionada));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            Promise.all(promesas).then(imagenesBase64 => {
+                appState.fotosSeleccionadas = [...appState.fotosSeleccionadas, ...imagenesBase64];
+                renderPreviews();
+                showToast("Fotos agregadas correctamente");
+            });
+        }
+
+        function redimensionarImagen(base64Src, maxAncho, maxAlto, callback) {
+            const img = new Image();
+            img.src = base64Src;
+            img.onload = () => {
+                let ancho = img.width;
+                let alto = img.height;
+                if (ancho > alto) {
+                    if (ancho > maxAncho) { alto *= maxAncho / ancho; ancho = maxAncho; }
+                } else {
+                    if (alto > maxAlto) { ancho *= maxAlto / alto; alto = maxAlto; }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = ancho;
+                canvas.height = alto;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, ancho, alto);
+                callback(canvas.toDataURL('image/jpeg', 0.70));
+            };
+        }
+
+        function eliminarFotoSeleccionada(idx) {
+            appState.fotosSeleccionadas.splice(idx, 1);
+            renderPreviews();
+        }
+
+        function renderPreviews() {
+            const grid = document.getElementById('preview-grid');
+            const container = document.getElementById('container-previews');
+            const count = document.getElementById('count-fotos');
+
+            if(!grid || !container) return;
+            grid.innerHTML = '';
+            count.innerText = appState.fotosSeleccionadas.length;
+
+            if (appState.fotosSeleccionadas.length > 0) {
+                container.classList.remove('hidden');
+                appState.fotosSeleccionadas.forEach((img, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'relative group rounded-xl overflow-hidden aspect-video border border-slate-200 shadow-sm bg-slate-100';
+                    div.innerHTML = `
+                        <img src="${img}" class="w-full h-full object-cover">
+                        <button onclick="eliminarFotoSeleccionada(${idx})" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1.5 shadow">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    `;
+                    grid.appendChild(div);
+                });
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        async function llamarApiGeminiConBackoff(payload) {
+            const currentApiKey = document.getElementById('input-api-key').value;
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentApiKey}`;
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) return await response.json();
+            const errData = await response.json();
+            throw new Error(errData?.error?.message || "Error al procesar solicitud");
+        }
+
+        async function procesarConGemini() {
+            const fecha = document.getElementById('input-fecha').value;
+            const nota = document.getElementById('input-nota').value;
+            const apiKeyInput = document.getElementById('input-api-key').value;
+
+            if (!fecha) {
+                showToast("Selecciona una fecha válida", "error");
+                return;
+            }
+
+            if (!apiKeyInput) {
+                showToast("Ingresa tu API Key en la pestaña Configuración", "error");
+                switchTab('config');
+                return;
+            }
+
+            if (appState.fotosSeleccionadas.length === 0) {
+                showToast("Sube al menos una foto de la cartuchera", "error");
+                return;
+            }
+
+            const btn = document.getElementById('btn-procesar');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin mr-2"></i> Procesando...`;
+
+            try {
+                const registroAnterior = obtenerUltimoRegistroAntesDe(fecha);
+                const parts = [{ text: `Analiza las imágenes de útiles escolares e identifica el inventario actual ('current_inventory') y las diferencias visuales respecto al día anterior ('lost', 'gained').` }];
+
+                if (registroAnterior && registroAnterior.fotos) {
+                    registroAnterior.fotos.forEach(foto => {
+                        parts.push({ inlineData: { mimeType: "image/jpeg", data: foto.replace(/^data:image\/\w+;base64,/, "") } });
+                    });
+                }
+
+                appState.fotosSeleccionadas.forEach(foto => {
+                    parts.push({ inlineData: { mimeType: "image/jpeg", data: foto.replace(/^data:image\/\w+;base64,/, "") } });
+                });
+
+                const payload = {
+                    contents: [{ parts }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                current_inventory: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: { name: { type: "STRING" }, quantity: { type: "INTEGER" }, color: { type: "STRING" } },
+                                        required: ["name", "quantity"]
+                                    }
+                                },
+                                delta: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        lost: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, quantity: { type: "INTEGER" } } } },
+                                        gained: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, quantity: { type: "INTEGER" } } } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                const data = await llamarApiGeminiConBackoff(payload);
+                const result = JSON.parse(data.candidates[0].content.parts[0].text);
+
+                appState.historial[fecha] = {
+                    fecha: fecha,
+                    nota: nota,
+                    items: result.current_inventory || [],
+                    delta: result.delta || { lost: [], gained: [] },
+                    fotos: [...appState.fotosSeleccionadas]
+                };
+
+                guardarDatosEnLocalStorage();
+                renderHistorial();
+                showToast(`¡Análisis guardado correctamente!`);
+                appState.fotosSeleccionadas = [];
+                renderPreviews();
+                switchTab('diario');
+
+            } catch (error) {
+                showToast(`Error: ${error.message}`, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function generarSimulacion() {
+            const fecha = document.getElementById('input-fecha').value;
+            const nota = document.getElementById('input-nota').value || "Simulación escolar";
+
+            if (!fecha) {
+                showToast("Por favor selecciona una fecha válida", "error");
+                return;
+            }
+
+            const fotoSimulada = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%236366f1'/><text x='50' y='55' font-size='40' text-anchor='middle' fill='white'>✏️</text></svg>";
+
+            appState.historial[fecha] = {
+                fecha: fecha,
+                nota: nota,
+                items: [
+                    { name: "Lápiz negro", quantity: 2, color: "Grafito" },
+                    { name: "Goma de borrar", quantity: 1, color: "Blanca" },
+                    { name: "Regla", quantity: 1, color: "Plástica" }
+                ],
+                delta: { lost: [{ name: "Tijera", quantity: 1 }], gained: [] },
+                fotos: appState.fotosSeleccionadas.length > 0 ? [...appState.fotosSeleccionadas] : [fotoSimulada]
+            };
+
+            guardarDatosEnLocalStorage();
+            renderHistorial();
+            showToast(`¡Demo simulada generada!`);
+            appState.fotosSeleccionadas = [];
+            renderPreviews();
+            switchTab('diario');
+        }
+
+        function renderHistorial() {
+            const tbody = document.getElementById('tabla-diario-body');
+            const noDataView = document.getElementById('no-data-view');
+            if(!tbody) return;
+
+            tbody.innerHTML = '';
+            const fechas = Object.keys(appState.historial).sort((a, b) => new Date(b) - new Date(a));
+
+            if (fechas.length === 0) {
+                if(noDataView) noDataView.classList.remove('hidden');
+                document.getElementById('stat-perdidos').innerText = '0';
+                document.getElementById('stat-ganados').innerText = '0';
+                document.getElementById('stat-dias').innerText = '0';
+                return;
+            }
+
+            if(noDataView) noDataView.classList.add('hidden');
+
+            let totalPerdidosAcum = 0;
+            let totalGanadosAcum = 0;
+
+            fechas.forEach(fecha => {
+                const registro = appState.historial[fecha];
+                const delta = registro.delta || { lost: [], gained: [] };
+
+                totalPerdidosAcum += (delta.lost || []).reduce((acc, cur) => acc + cur.quantity, 0);
+                totalGanadosAcum += (delta.gained || []).reduce((acc, cur) => acc + cur.quantity, 0);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+
+                let fotosHtml = registro.fotos && registro.fotos.length > 0 ? 
+                    `<img class="h-8 w-8 rounded-full object-cover" src="${registro.fotos[0]}">` : `<span class="text-xs text-slate-400">Sin foto</span>`;
+
+                const listaUtilesHtml = registro.items.map(item => `<span class="inline-block bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-medium m-0.5">${item.quantity}x ${item.name}</span>`).join(' ');
+
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold text-slate-900">${formatearFechaAMano(fecha)}</td>
+                    <td class="py-4 px-6">${fotosHtml}</td>
+                    <td class="py-4 px-6 max-w-xs">${listaUtilesHtml}</td>
+                    <td class="py-4 px-6 text-xs text-slate-500">Pérdidas: ${delta.lost ? delta.lost.length : 0}</td>
+                    <td class="py-4 px-6 text-xs text-amber-700">Revisado</td>
+                    <td class="py-4 px-6 text-center">
+                        <button onclick="verDetalleDia('${fecha}')" class="bg-indigo-100 text-indigo-700 p-2 rounded-lg mr-1"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="eliminarRegistroDia('${fecha}')" class="bg-red-50 text-red-600 p-2 rounded-lg"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('stat-perdidos').innerText = totalPerdidosAcum;
+            document.getElementById('stat-ganados').innerText = totalGanadosAcum;
+            document.getElementById('stat-dias').innerText = fechas.length;
+        }
+
+        function renderReferencia() {
+            const tbody = document.getElementById('tabla-referencia-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            appState.referencia.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-6"><input type="text" value="${item.name}" onchange="actualizarDatoReferencia('${item.id}', 'name', this.value)" class="w-full px-3 py-1.5 border rounded-lg"></td>
+                    <td class="py-3 px-6"><input type="number" min="1" value="${item.quantity}" onchange="actualizarDatoReferencia('${item.id}', 'quantity', parseInt(this.value))" class="w-24 px-3 py-1.5 border rounded-lg"></td>
+                    <td class="py-3 px-6"><input type="text" value="${item.color || ''}" onchange="actualizarDatoReferencia('${item.id}', 'color', this.value)" class="w-full px-3 py-1.5 border rounded-lg"></td>
+                    <td class="py-3 px-6 text-center"><button onclick="eliminarFilaReferencia('${item.id}')" class="text-red-500 p-1.5"><i class="fa-solid fa-trash-can"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function agregarFilaReferencia() {
+            appState.referencia.push({ id: Math.random().toString(36).substr(2, 9), name: "Nuevo útil", quantity: 1, color: "" });
+            renderReferencia();
+        }
+
+        function actualizarDatoReferencia(id, campo, valor) {
+            const item = appState.referencia.find(i => i.id === id);
+            if (item) item[campo] = valor;
+        }
+
+        function eliminarFilaReferencia(id) {
+            appState.referencia = appState.referencia.filter(i => i.id !== id);
+            renderReferencia();
+        }
+
+        function restablecerReferenciaDefecto() {
+            appState.referencia = [
+                { id: "1", name: "Lápiz negro", quantity: 2, color: "Grafito" },
+                { id: "2", name: "Goma de borrar", quantity: 1, color: "Blanca" }
+            ];
+            renderReferencia();
+            showToast("Lista restaurada");
+        }
+
+        function guardarReferencia() {
+            guardarDatosEnLocalStorage();
+            showToast("Inventario guardado");
+        }
+
+        function verDetalleDia(fecha) {
+            const registro = appState.historial[fecha];
+            if (!registro) return;
+
+            document.getElementById('modal-titulo').innerText = `Reporte del día`;
+            document.getElementById('modal-fecha').innerText = `Fecha: ${formatearFechaAMano(fecha)}`;
+
+            const tablaItems = document.getElementById('modal-tabla-items');
+            tablaItems.innerHTML = '';
+            registro.items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="py-2 px-3">${item.name}</td><td class="py-2 px-3 text-center">${item.quantity}</td><td class="py-2 px-3">${item.color || '-'}</td>`;
+                tablaItems.appendChild(tr);
+            });
+
+            document.getElementById('modal-detalle').classList.remove('hidden');
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-detalle').classList.add('hidden');
+        }
+
+        function eliminarRegistroDia(fecha) {
+            if (confirm(`¿Eliminar registro de ${formatearFechaAMano(fecha)}?`)) {
+                delete appState.historial[fecha];
+                guardarDatosEnLocalStorage();
+                renderHistorial();
+                showToast("Registro eliminado", "info");
+            }
+        }
+
+        function guardarConfiguracion() {
+            const key = document.getElementById('input-api-key').value;
+            localStorage.setItem('cartuchera_api_key', key);
+            showToast("Configuración guardada");
+        }
+
+        function borrarTodosLosDatos() {
+            if (confirm("¿Borrar todos los datos locales?")) {
+                localStorage.clear();
+                appState.historial = {};
+                renderHistorial();
+                showToast("Aplicación restablecida", "info");
+            }
+        }
+
+        function guardarDatosEnLocalStorage() {
+            localStorage.setItem('cartuchera_app_state', JSON.stringify(appState));
+        }
+
+        function cargarDatosDesdeLocalStorage() {
+            const guardado = localStorage.getItem('cartuchera_app_state');
+            if (guardado) {
+                try {
+                    const parsed = JSON.parse(guardado);
+                    if (parsed.historial) appState.historial = parsed.historial;
+                    if (parsed.referencia) appState.referencia = parsed.referencia;
+                } catch (e) {}
+            }
+            const savedKey = localStorage.getItem('cartuchera_api_key');
+            if (savedKey) document.getElementById('input-api-key').value = savedKey;
+        }
+
+        function formatearFechaAMano(fechaStr) {
+            if (!fechaStr) return '';
+            const partes = fechaStr.split('-');
+            return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : fechaStr;
+        }
+    </script>
+</body>
+</html>
