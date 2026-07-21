@@ -299,6 +299,30 @@
     <script>
         const MODEL_NAME = "gemini-2.5-flash";
 
+        // Catálogo fijo de útiles. El modelo SOLO cuenta estas categorías; todo lo que no
+        // encaje aquí se ignora. Esto permite restar cantidades entre días con confianza.
+        const CATALOGO_UTILES = [
+            "Lápiz de grafito",
+            "Lápices de colores",
+            "Goma de borrar",
+            "Sacapuntas",
+            "Tijera",
+            "Regla",
+            "Adhesivo en barra",
+            "Bolígrafo / Lapicera",
+            "Marcador / Fibra",
+            "Resaltador",
+            "Corrector",
+            "Compás",
+            "Crayones",
+            "Pincel",
+            "Témpera / Acuarela",
+            "Cuaderno / Bloc",
+            "Cartuchera",
+            "Escuadra / Transportador"
+        ];
+
+
         let appState = {
             historial: {},
             referencia: [
@@ -411,6 +435,61 @@
                 .sort();
             if (fechas.length === 0) return null;
             return appState.historial[fechas[fechas.length - 1]];
+        }
+
+        function normalizarNombre(nombre) {
+            return (nombre || '')
+                .toString()
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quita acentos
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function calcularDelta(inventarioAnterior, inventarioActual) {
+            // Sin día anterior: no hay comparación posible.
+            if (!Array.isArray(inventarioAnterior) || inventarioAnterior.length === 0) {
+                return { lost: [], gained: [] };
+            }
+
+            const mapaCant = (lista) => {
+                const mapa = new Map();
+                (lista || []).forEach(item => {
+                    const clave = normalizarNombre(item.name);
+                    if (!clave) return;
+                    const cant = Number.isFinite(item.quantity) ? item.quantity : 1;
+                    mapa.set(clave, {
+                        name: item.name,
+                        quantity: (mapa.get(clave)?.quantity || 0) + cant
+                    });
+                });
+                return mapa;
+            };
+
+            const antes = mapaCant(inventarioAnterior);
+            const ahora = mapaCant(inventarioActual);
+
+            const lost = [];
+            const gained = [];
+
+            // Perdidos o disminuidos.
+            antes.forEach((info, clave) => {
+                const cantAhora = ahora.get(clave)?.quantity || 0;
+                if (cantAhora < info.quantity) {
+                    lost.push({ name: info.name, quantity: info.quantity - cantAhora });
+                }
+            });
+
+            // Ganados o aumentados.
+            ahora.forEach((info, clave) => {
+                const cantAntes = antes.get(clave)?.quantity || 0;
+                if (info.quantity > cantAntes) {
+                    gained.push({ name: info.name, quantity: info.quantity - cantAntes });
+                }
+            });
+
+            return { lost, gained };
         }
 
         function verificarPreviaFecha(fechaSeleccionada) {
@@ -584,35 +663,30 @@
 
             try {
                 const registroAnterior = obtenerUltimoRegistroAntesDe(fecha);
-                const tieneAnterior = registroAnterior && Array.isArray(registroAnterior.fotos) && registroAnterior.fotos.length > 0;
+                const inventarioAnterior = (registroAnterior && Array.isArray(registroAnterior.items)) ? registroAnterior.items : null;
 
-                const instruccion = tieneAnterior
-                    ? `Eres un asistente que controla una cartuchera escolar comparando fotos de dos días.
-Recibirás primero las imágenes del DÍA ANTERIOR (referencia) y luego las del DÍA ACTUAL (a evaluar), cada grupo precedido por una etiqueta de texto.
-Tareas:
-1) 'current_inventory': lista los útiles visibles en las imágenes del DÍA ACTUAL con nombre, cantidad y color.
-2) 'delta.lost': útiles que estaban en el DÍA ANTERIOR pero ya NO aparecen (o disminuyeron) en el DÍA ACTUAL, con la cantidad perdida.
-3) 'delta.gained': útiles que aparecen (o aumentaron) en el DÍA ACTUAL respecto al DÍA ANTERIOR, con la cantidad ganada.
-Compara SIEMPRE actual contra anterior. No confundas los grupos: usa únicamente las etiquetas para saber a qué día pertenece cada imagen.`
-                    : `Eres un asistente que controla una cartuchera escolar. Solo hay imágenes del DÍA ACTUAL (no existe día anterior).
-Tareas:
-1) 'current_inventory': lista los útiles visibles con nombre, cantidad y color.
-2) 'delta.lost' y 'delta.gained': deben quedar vacíos porque no hay día anterior con el cual comparar.`;
+                const listaCatalogo = CATALOGO_UTILES.map(n => `- ${n}`).join('\n');
+                const instruccion = `Eres un asistente que controla una cartuchera escolar. Observa ÚNICAMENTE las imágenes del día actual y CUENTA cuántas unidades hay de cada útil de la lista fija de categorías.
+Reglas estrictas:
+- Devuelve un número entero (0 o más) para CADA categoría de la lista, incluso si no aparece (en ese caso, 0).
+- Cuenta solo lo que veas con claridad en estas imágenes. No inventes ni asumas.
+- Si ves un útil que NO corresponde a ninguna categoría de la lista, NO lo cuentes en ninguna parte.
+- Agrupa variantes bajo su categoría (ej.: varios lápices de grafito suman en "Lápiz de grafito"). Una caja o set de lápices de colores cuenta como 1 unidad de "Lápices de colores".
+
+Categorías (usa EXACTAMENTE estos nombres como claves):
+${listaCatalogo}`;
 
                 const parts = [{ text: instruccion }];
-
-                if (tieneAnterior) {
-                    parts.push({ text: `--- Imágenes del DÍA ANTERIOR (referencia, fecha ${registroAnterior.fecha}) ---` });
-                    registroAnterior.fotos.forEach((foto, idx) => {
-                        parts.push({ text: `Anterior #${idx + 1}:` });
-                        parts.push({ inlineData: { mimeType: "image/jpeg", data: foto.replace(/^data:image\/\w+;base64,/, "") } });
-                    });
-                }
-
-                parts.push({ text: `--- Imágenes del DÍA ACTUAL (a evaluar, fecha ${fecha}) ---` });
+                parts.push({ text: `--- Imágenes del DÍA ACTUAL (fecha ${fecha}) ---` });
                 appState.fotosSeleccionadas.forEach((foto, idx) => {
-                    parts.push({ text: `Actual #${idx + 1}:` });
+                    parts.push({ text: `Foto #${idx + 1}:` });
                     parts.push({ inlineData: { mimeType: "image/jpeg", data: foto.replace(/^data:image\/\w+;base64,/, "") } });
+                });
+
+                // Esquema: un objeto con una propiedad entera por cada categoría del catálogo.
+                const propiedadesConteo = {};
+                CATALOGO_UTILES.forEach(nombre => {
+                    propiedadesConteo[nombre] = { type: "INTEGER" };
                 });
 
                 const payload = {
@@ -621,23 +695,8 @@ Tareas:
                         responseMimeType: "application/json",
                         responseSchema: {
                             type: "OBJECT",
-                            properties: {
-                                current_inventory: {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: { name: { type: "STRING" }, quantity: { type: "INTEGER" }, color: { type: "STRING" } },
-                                        required: ["name", "quantity"]
-                                    }
-                                },
-                                delta: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        lost: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, quantity: { type: "INTEGER" } } } },
-                                        gained: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, quantity: { type: "INTEGER" } } } }
-                                    }
-                                }
-                            }
+                            properties: { counts: { type: "OBJECT", properties: propiedadesConteo } },
+                            required: ["counts"]
                         }
                     }
                 };
@@ -649,12 +708,20 @@ Tareas:
                     throw new Error(motivo ? `Gemini no devolvió resultados (${motivo})` : "Gemini no devolvió resultados");
                 }
                 const result = JSON.parse(texto);
+                const conteos = result.counts || {};
+
+                // Solo se guardan las categorías con cantidad > 0.
+                const inventarioActual = CATALOGO_UTILES
+                    .map(nombre => ({ name: nombre, quantity: Math.max(0, parseInt(conteos[nombre], 10) || 0) }))
+                    .filter(item => item.quantity > 0);
+
+                const delta = calcularDelta(inventarioAnterior, inventarioActual);
 
                 appState.historial[fecha] = {
                     fecha: fecha,
                     nota: nota,
-                    items: result.current_inventory || [],
-                    delta: result.delta || { lost: [], gained: [] },
+                    items: inventarioActual,
+                    delta: delta,
                     fotos: [...appState.fotosSeleccionadas]
                 };
 
