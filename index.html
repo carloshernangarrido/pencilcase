@@ -513,19 +513,47 @@
             }
         }
 
-        async function llamarApiGeminiConBackoff(payload) {
+        async function llamarApiGeminiConBackoff(payload, maxRetries = 4) {
             const currentApiKey = document.getElementById('input-api-key').value;
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${currentApiKey}`;
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${encodeURIComponent(currentApiKey)}`;
 
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            let lastError;
+            for (let intento = 0; intento <= maxRetries; intento++) {
+                let response;
+                try {
+                    response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (networkError) {
+                    lastError = new Error("Error de red al contactar a Gemini");
+                    if (intento < maxRetries) {
+                        await esperar(Math.pow(2, intento) * 1000 + Math.random() * 500);
+                        continue;
+                    }
+                    throw lastError;
+                }
 
-            if (response.ok) return await response.json();
-            const errData = await response.json();
-            throw new Error(errData?.error?.message || "Error al procesar solicitud");
+                if (response.ok) return await response.json();
+
+                const errData = await response.json().catch(() => null);
+                const mensaje = errData?.error?.message || `Error ${response.status} al procesar solicitud`;
+
+                // Reintentar solo ante errores transitorios (rate limit / servidor sobrecargado).
+                const esTransitorio = response.status === 429 || response.status >= 500;
+                if (esTransitorio && intento < maxRetries) {
+                    lastError = new Error(mensaje);
+                    await esperar(Math.pow(2, intento) * 1000 + Math.random() * 500);
+                    continue;
+                }
+                throw new Error(mensaje);
+            }
+            throw lastError || new Error("Error al procesar solicitud");
+        }
+
+        function esperar(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
 
         async function procesarConGemini() {
@@ -596,7 +624,12 @@
                 };
 
                 const data = await llamarApiGeminiConBackoff(payload);
-                const result = JSON.parse(data.candidates[0].content.parts[0].text);
+                const texto = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!texto) {
+                    const motivo = data?.candidates?.[0]?.finishReason || data?.promptFeedback?.blockReason;
+                    throw new Error(motivo ? `Gemini no devolvió resultados (${motivo})` : "Gemini no devolvió resultados");
+                }
+                const result = JSON.parse(texto);
 
                 appState.historial[fecha] = {
                     fecha: fecha,
