@@ -312,14 +312,7 @@
             "Bolígrafo / Lapicera",
             "Marcador / Fibra",
             "Resaltador",
-            "Corrector",
-            "Compás",
-            "Crayones",
-            "Pincel",
-            "Témpera / Acuarela",
-            "Cuaderno / Bloc",
-            "Cartuchera",
-            "Escuadra / Transportador"
+            "Compás"
         ];
 
 
@@ -692,6 +685,7 @@ ${listaCatalogo}`;
                 const payload = {
                     contents: [{ parts }],
                     generationConfig: {
+                        temperature: 0,
                         responseMimeType: "application/json",
                         responseSchema: {
                             type: "OBJECT",
