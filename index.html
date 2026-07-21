@@ -584,15 +584,34 @@
 
             try {
                 const registroAnterior = obtenerUltimoRegistroAntesDe(fecha);
-                const parts = [{ text: `Analiza las imágenes de útiles escolares e identifica el inventario actual ('current_inventory') y las diferencias visuales respecto al día anterior ('lost', 'gained').` }];
+                const tieneAnterior = registroAnterior && Array.isArray(registroAnterior.fotos) && registroAnterior.fotos.length > 0;
 
-                if (registroAnterior && registroAnterior.fotos) {
-                    registroAnterior.fotos.forEach(foto => {
+                const instruccion = tieneAnterior
+                    ? `Eres un asistente que controla una cartuchera escolar comparando fotos de dos días.
+Recibirás primero las imágenes del DÍA ANTERIOR (referencia) y luego las del DÍA ACTUAL (a evaluar), cada grupo precedido por una etiqueta de texto.
+Tareas:
+1) 'current_inventory': lista los útiles visibles en las imágenes del DÍA ACTUAL con nombre, cantidad y color.
+2) 'delta.lost': útiles que estaban en el DÍA ANTERIOR pero ya NO aparecen (o disminuyeron) en el DÍA ACTUAL, con la cantidad perdida.
+3) 'delta.gained': útiles que aparecen (o aumentaron) en el DÍA ACTUAL respecto al DÍA ANTERIOR, con la cantidad ganada.
+Compara SIEMPRE actual contra anterior. No confundas los grupos: usa únicamente las etiquetas para saber a qué día pertenece cada imagen.`
+                    : `Eres un asistente que controla una cartuchera escolar. Solo hay imágenes del DÍA ACTUAL (no existe día anterior).
+Tareas:
+1) 'current_inventory': lista los útiles visibles con nombre, cantidad y color.
+2) 'delta.lost' y 'delta.gained': deben quedar vacíos porque no hay día anterior con el cual comparar.`;
+
+                const parts = [{ text: instruccion }];
+
+                if (tieneAnterior) {
+                    parts.push({ text: `--- Imágenes del DÍA ANTERIOR (referencia, fecha ${registroAnterior.fecha}) ---` });
+                    registroAnterior.fotos.forEach((foto, idx) => {
+                        parts.push({ text: `Anterior #${idx + 1}:` });
                         parts.push({ inlineData: { mimeType: "image/jpeg", data: foto.replace(/^data:image\/\w+;base64,/, "") } });
                     });
                 }
 
-                appState.fotosSeleccionadas.forEach(foto => {
+                parts.push({ text: `--- Imágenes del DÍA ACTUAL (a evaluar, fecha ${fecha}) ---` });
+                appState.fotosSeleccionadas.forEach((foto, idx) => {
+                    parts.push({ text: `Actual #${idx + 1}:` });
                     parts.push({ inlineData: { mimeType: "image/jpeg", data: foto.replace(/^data:image\/\w+;base64,/, "") } });
                 });
 
@@ -725,7 +744,7 @@
                     <td class="py-4 px-6 font-semibold text-slate-900">${formatearFechaAMano(fecha)}</td>
                     <td class="py-4 px-6">${fotosHtml}</td>
                     <td class="py-4 px-6 max-w-xs">${listaUtilesHtml}</td>
-                    <td class="py-4 px-6 text-xs text-slate-500">Pérdidas: ${delta.lost ? delta.lost.length : 0}</td>
+                    <td class="py-4 px-6 max-w-xs">${renderDeltaVisualHtml(delta)}</td>
                     <td class="py-4 px-6 text-xs text-amber-700">Revisado</td>
                     <td class="py-4 px-6 text-center">
                         <button onclick="verDetalleDia('${fecha}')" class="bg-indigo-100 text-indigo-700 p-2 rounded-lg mr-1"><i class="fa-solid fa-eye"></i></button>
@@ -738,6 +757,25 @@
             document.getElementById('stat-perdidos').innerText = totalPerdidosAcum;
             document.getElementById('stat-ganados').innerText = totalGanadosAcum;
             document.getElementById('stat-dias').innerText = fechas.length;
+        }
+
+        function renderDeltaVisualHtml(delta) {
+            const lost = (delta && Array.isArray(delta.lost)) ? delta.lost : [];
+            const gained = (delta && Array.isArray(delta.gained)) ? delta.gained : [];
+
+            if (lost.length === 0 && gained.length === 0) {
+                return `<span class="text-xs text-slate-400"><i class="fa-solid fa-equals mr-1"></i>Sin cambios</span>`;
+            }
+
+            const lostHtml = lost.map(item =>
+                `<span class="inline-flex items-center bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded font-medium m-0.5"><i class="fa-solid fa-arrow-down mr-1"></i>${item.quantity || 1}x ${item.name}</span>`
+            ).join('');
+
+            const gainedHtml = gained.map(item =>
+                `<span class="inline-flex items-center bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded font-medium m-0.5"><i class="fa-solid fa-arrow-up mr-1"></i>${item.quantity || 1}x ${item.name}</span>`
+            ).join('');
+
+            return `<div class="flex flex-wrap">${lostHtml}${gainedHtml}</div>`;
         }
 
         function renderReferencia() {
@@ -800,6 +838,11 @@
                 tr.innerHTML = `<td class="py-2 px-3">${item.name}</td><td class="py-2 px-3 text-center">${item.quantity}</td><td class="py-2 px-3">${item.color || '-'}</td>`;
                 tablaItems.appendChild(tr);
             });
+
+            const modalDelta = document.getElementById('modal-balance-container');
+            if (modalDelta) {
+                modalDelta.innerHTML = renderDeltaVisualHtml(registro.delta);
+            }
 
             document.getElementById('modal-detalle').classList.remove('hidden');
         }
